@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        canvas { background: #000; display: block; margin: auto; }
+        #score { font-size: 20px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Juego de Tetris</h1>
+    <canvas id="tetris" width="300" height="600"></canvas>
+    <div id="score">Puntos: 0</div> <!-- Contador de puntos -->
+    <script>
+        const canvas = document.getElementById("tetris");
+        const context = canvas.getContext("2d");
+        context.scale(30, 30);
+
+        // Definir los tetrominos con sus formas y colores fijos
+        const tetrominos = [
+            { shape: [[1, 1, 1], [0, 1, 0]], color: "red" }, // T
+            { shape: [[1, 1], [1, 1]], color: "yellow" }, // O
+            { shape: [[1, 1, 0], [0, 1, 1]], color: "green" }, // S
+            { shape: [[0, 1, 1], [1, 1, 0]], color: "blue" }, // Z
+            { shape: [[1, 1, 1, 1]], color: "cyan" }, // I
+            { shape: [[1, 1, 1], [1, 0, 0]], color: "orange" }, // L
+            { shape: [[1, 1, 1], [0, 0, 1]], color: "purple" } // J
+        ];
+
+        let board = Array.from({ length: 20 }, () => Array(10).fill(0));
+        let currentPiece = generatePiece();
+        let position = { x: 4, y: 0 };
+        let lastTime = 0;
+        const dropInterval = 1000; // Intervalo en milisegundos para la caída
+        let dropCounter = 0;
+
+        // Contador de puntos
+        let points = 0;
+
+        // Función para dibujar la pieza en el canvas
+        function drawMatrix(matrix, offset) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        context.fillStyle = currentPiece.color; // Mantener el color fijo de la pieza
+                        context.fillRect(x + offset.x, y + offset.y, 1, 1);
+                    }
+                });
+            });
+        }
+
+        // Genera una nueva pieza aleatoria con su color fijo
+        function generatePiece() {
+            const randomIndex = Math.floor(Math.random() * tetrominos.length);
+            return { 
+                shape: tetrominos[randomIndex].shape, // Forma de la pieza
+                color: tetrominos[randomIndex].color, // Color fijo para esta pieza
+                rotation: 0 // Empezamos con la rotación en 0
+            };
+        }
+
+        // Función para dibujar el tablero y las piezas
+        function draw() {
+            context.fillStyle = "black";
+            context.fillRect(0, 0, canvas.width, canvas.height); // Limpiar el canvas
+            drawMatrix(currentPiece.shape, position); // Dibujar la pieza actual
+            drawMatrix(board, { x: 0, y: 0 }); // Dibujar el tablero
+            // Mostrar los puntos en la parte superior
+            document.getElementById("score").textContent = `Puntos: ${points}`;
+        }
+
+        // Mueve la pieza en el eje X y Y
+        function movePiece(dx, dy) {
+            position.x += dx;
+            position.y += dy;
+            if (collision()) {
+                position.x -= dx;
+                position.y -= dy;
+                if (dy > 0) {
+                    placePiece(); // Coloca la pieza sobre el tablero
+                }
+            }
+        }
+
+        // Verifica si la pieza actual entra en colisión con el fondo o con otras piezas
+        function collision() {
+            return currentPiece.shape.some((row, y) => {
+                return row.some((value, x) => {
+                    if (value !== 0) {
+                        const newX = position.x + x;
+                        const newY = position.y + y;
+                        return newX < 0 || newX >= 10 || newY >= 20 || board[newY][newX] !== 0;
+                    }
+                    return false;
+                });
+            });
+        }
+
+        // Coloca la pieza en el tablero
+        function placePiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        board[position.y + y][position.x + x] = value; // Coloca la pieza en el tablero
+                    }
+                });
+            });
+            clearRows(); // Elimina las filas completas
+            currentPiece = generatePiece(); // Generar una nueva pieza
+            position = { x: 4, y: 0 }; // Resetear la posición
+            if (collision()) {
+                // Game Over
+                alert("Game Over!");
+                board = Array.from({ length: 20 }, () => Array(10).fill(0)); // Reiniciar el tablero
+            }
+        }
+
+        // Elimina las filas completas y actualiza los puntos
+        function clearRows() {
+            for (let row = 0; row < 20; row++) {
+                if (board[row].every(cell => cell !== 0)) {
+                    // Incrementar puntos por fila eliminada
+                    points += 10;
+                    board.splice(row, 1);
+                    board.unshift(Array(10).fill(0)); // Mover todas las filas hacia abajo
+                }
+            }
+        }
+
+        // Rotar la pieza
+        function rotatePiece() {
+            currentPiece.rotation = (currentPiece.rotation + 1) % 4; // Solo 4 rotaciones posibles
+            currentPiece.shape = rotate(currentPiece.shape);
+
+            if (collision()) {
+                // Si colisiona, revertir rotación
+                currentPiece.rotation = (currentPiece.rotation - 1 + 4) % 4;
+                currentPiece.shape = rotate(currentPiece.shape);
+            }
+        }
+
+        // Función para realizar la rotación de la pieza
+        function rotate(matrix) {
+            const rotated = matrix[0].map((_, index) => matrix.map(row => row[index])).reverse();
+            return rotated;
+        }
+
+        // Función para actualizar el juego
+        function update(time = 0) {
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                movePiece(0, 1); // Mueve la pieza hacia abajo
+                dropCounter = 0;
+            }
+
+            draw(); // Redibujar el tablero
+            requestAnimationFrame(update); // Continuar la animación
+        }
+
+        // Control de teclas para mover la pieza y rotarla
+        document.addEventListener("keydown", event => {
+            if (event.key === "a") {
+                movePiece(-1, 0); // Mover izquierda
+            } else if (event.key === "d") {
+                movePiece(1, 0); // Mover derecha
+            } else if (event.key === "s") {
+                movePiece(0, 1); // Mover hacia abajo
+            } else if (event.key === "w") {
+                rotatePiece(); // Rotar la pieza
+            } else if (event.key === "ArrowLeft") {
+                movePiece(-1, 0); // Mover izquierda con flecha
+            } else if (event.key === "ArrowRight") {
+                movePiece(1, 0); // Mover derecha con flecha
+            } else if (event.key === "ArrowDown") {
+                movePiece(0, 1); // Mover hacia abajo con flecha
+            } else if (event.key === "ArrowUp") {
+                rotatePiece(); // Rotar con flecha arriba
+            }
+        });
+
+        update();
+    </script>
+</body>
+</html>
