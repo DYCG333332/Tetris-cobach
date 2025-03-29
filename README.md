@@ -8,71 +8,92 @@
         body { text-align: center; font-family: Arial, sans-serif; }
         canvas { background: #000; display: block; margin: auto; }
         #score { font-size: 20px; margin-top: 20px; }
+        
+        /* Estilos para los controles táctiles */
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .control-button {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            margin: 5px;
+            font-size: 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .control-button:active {
+            background-color: rgba(0, 0, 0, 1);
+        }
     </style>
 </head>
 <body>
     <h1>Juego de Tetris</h1>
     <canvas id="tetris" width="300" height="600"></canvas>
     <div id="score">Puntos: 0</div> <!-- Contador de puntos -->
+
+    <!-- Controles táctiles para móvil -->
+    <div class="controls">
+        <button class="control-button" id="left">←</button>
+        <button class="control-button" id="down">↓</button>
+        <button class="control-button" id="rotate">↑</button>
+        <button class="control-button" id="right">→</button>
+    </div>
+
     <script>
         const canvas = document.getElementById("tetris");
         const context = canvas.getContext("2d");
         context.scale(30, 30);
 
-        // Definir los tetrominos con sus formas y colores fijos
         const tetrominos = [
-            { shape: [[1, 1, 1], [0, 1, 0]], color: "red" }, // T
-            { shape: [[1, 1], [1, 1]], color: "yellow" }, // O
-            { shape: [[1, 1, 0], [0, 1, 1]], color: "green" }, // S
-            { shape: [[0, 1, 1], [1, 1, 0]], color: "blue" }, // Z
-            { shape: [[1, 1, 1, 1]], color: "cyan" }, // I
-            { shape: [[1, 1, 1], [1, 0, 0]], color: "orange" }, // L
-            { shape: [[1, 1, 1], [0, 0, 1]], color: "purple" } // J
+            { shape: [[1, 1, 1], [0, 1, 0]], color: "red" },
+            { shape: [[1, 1], [1, 1]], color: "yellow" },
+            { shape: [[1, 1, 0], [0, 1, 1]], color: "green" },
+            { shape: [[0, 1, 1], [1, 1, 0]], color: "blue" },
+            { shape: [[1, 1, 1, 1]], color: "cyan" },
+            { shape: [[1, 1, 1], [1, 0, 0]], color: "orange" },
+            { shape: [[1, 1, 1], [0, 0, 1]], color: "purple" }
         ];
 
         let board = Array.from({ length: 20 }, () => Array(10).fill(0));
         let currentPiece = generatePiece();
         let position = { x: 4, y: 0 };
         let lastTime = 0;
-        const dropInterval = 1000; // Intervalo en milisegundos para la caída
+        const dropInterval = 1000;
         let dropCounter = 0;
-
-        // Contador de puntos
         let points = 0;
 
-        // Función para dibujar la pieza en el canvas
         function drawMatrix(matrix, offset) {
             matrix.forEach((row, y) => {
                 row.forEach((value, x) => {
                     if (value !== 0) {
-                        context.fillStyle = currentPiece.color; // Mantener el color fijo de la pieza
+                        context.fillStyle = currentPiece.color;
                         context.fillRect(x + offset.x, y + offset.y, 1, 1);
                     }
                 });
             });
         }
 
-        // Genera una nueva pieza aleatoria con su color fijo
         function generatePiece() {
             const randomIndex = Math.floor(Math.random() * tetrominos.length);
             return { 
-                shape: tetrominos[randomIndex].shape, // Forma de la pieza
-                color: tetrominos[randomIndex].color, // Color fijo para esta pieza
-                rotation: 0 // Empezamos con la rotación en 0
+                shape: tetrominos[randomIndex].shape,
+                color: tetrominos[randomIndex].color,
+                rotation: 0
             };
         }
 
-        // Función para dibujar el tablero y las piezas
         function draw() {
             context.fillStyle = "black";
-            context.fillRect(0, 0, canvas.width, canvas.height); // Limpiar el canvas
-            drawMatrix(currentPiece.shape, position); // Dibujar la pieza actual
-            drawMatrix(board, { x: 0, y: 0 }); // Dibujar el tablero
-            // Mostrar los puntos en la parte superior
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            drawMatrix(currentPiece.shape, position);
+            drawMatrix(board, { x: 0, y: 0 });
             document.getElementById("score").textContent = `Puntos: ${points}`;
         }
 
-        // Mueve la pieza en el eje X y Y
         function movePiece(dx, dy) {
             position.x += dx;
             position.y += dy;
@@ -80,12 +101,11 @@
                 position.x -= dx;
                 position.y -= dy;
                 if (dy > 0) {
-                    placePiece(); // Coloca la pieza sobre el tablero
+                    placePiece();
                 }
             }
         }
 
-        // Verifica si la pieza actual entra en colisión con el fondo o con otras piezas
         function collision() {
             return currentPiece.shape.some((row, y) => {
                 return row.some((value, x) => {
@@ -99,89 +119,89 @@
             });
         }
 
-        // Coloca la pieza en el tablero
         function placePiece() {
             currentPiece.shape.forEach((row, y) => {
                 row.forEach((value, x) => {
                     if (value !== 0) {
-                        board[position.y + y][position.x + x] = value; // Coloca la pieza en el tablero
+                        board[position.y + y][position.x + x] = value;
                     }
                 });
             });
-            clearRows(); // Elimina las filas completas
-            currentPiece = generatePiece(); // Generar una nueva pieza
-            position = { x: 4, y: 0 }; // Resetear la posición
+            clearRows();
+            currentPiece = generatePiece();
+            position = { x: 4, y: 0 };
             if (collision()) {
-                // Game Over
                 alert("Game Over!");
-                board = Array.from({ length: 20 }, () => Array(10).fill(0)); // Reiniciar el tablero
+                board = Array.from({ length: 20 }, () => Array(10).fill(0));
             }
         }
 
-        // Elimina las filas completas y actualiza los puntos
         function clearRows() {
             for (let row = 0; row < 20; row++) {
                 if (board[row].every(cell => cell !== 0)) {
-                    // Incrementar puntos por fila eliminada
                     points += 10;
                     board.splice(row, 1);
-                    board.unshift(Array(10).fill(0)); // Mover todas las filas hacia abajo
+                    board.unshift(Array(10).fill(0));
                 }
             }
         }
 
-        // Rotar la pieza
         function rotatePiece() {
-            currentPiece.rotation = (currentPiece.rotation + 1) % 4; // Solo 4 rotaciones posibles
+            currentPiece.rotation = (currentPiece.rotation + 1) % 4;
             currentPiece.shape = rotate(currentPiece.shape);
 
             if (collision()) {
-                // Si colisiona, revertir rotación
                 currentPiece.rotation = (currentPiece.rotation - 1 + 4) % 4;
                 currentPiece.shape = rotate(currentPiece.shape);
             }
         }
 
-        // Función para realizar la rotación de la pieza
         function rotate(matrix) {
             const rotated = matrix[0].map((_, index) => matrix.map(row => row[index])).reverse();
             return rotated;
         }
 
-        // Función para actualizar el juego
         function update(time = 0) {
             const deltaTime = time - lastTime;
             lastTime = time;
             dropCounter += deltaTime;
 
             if (dropCounter > dropInterval) {
-                movePiece(0, 1); // Mueve la pieza hacia abajo
+                movePiece(0, 1);
                 dropCounter = 0;
             }
 
-            draw(); // Redibujar el tablero
-            requestAnimationFrame(update); // Continuar la animación
+            draw();
+            requestAnimationFrame(update);
         }
 
-        // Control de teclas para mover la pieza y rotarla
         document.addEventListener("keydown", event => {
             if (event.key === "a") {
-                movePiece(-1, 0); // Mover izquierda
+                movePiece(-1, 0);
             } else if (event.key === "d") {
-                movePiece(1, 0); // Mover derecha
+                movePiece(1, 0);
             } else if (event.key === "s") {
-                movePiece(0, 1); // Mover hacia abajo
+                movePiece(0, 1);
             } else if (event.key === "w") {
-                rotatePiece(); // Rotar la pieza
-            } else if (event.key === "ArrowLeft") {
-                movePiece(-1, 0); // Mover izquierda con flecha
-            } else if (event.key === "ArrowRight") {
-                movePiece(1, 0); // Mover derecha con flecha
-            } else if (event.key === "ArrowDown") {
-                movePiece(0, 1); // Mover hacia abajo con flecha
-            } else if (event.key === "ArrowUp") {
-                rotatePiece(); // Rotar con flecha arriba
+                rotatePiece();
             }
+        });
+
+        // Controles táctiles
+        document.getElementById("left").addEventListener("touchstart", () => {
+            movePiece(-1, 0); // Mover a la izquierda
+        });
+
+        document.getElementById("right").addEventListener("touchstart", () => {
+            movePiece(1, 0); // Mover a la derecha
+        });
+
+        document.getElementById("down").addEventListener("touchstart", () => {
+            movePiece(0, 1); // Mover hacia abajo
+        });
+
+        document.getElementById("rotate").addEventListener("touchstart", () => {
+            rotatePiece(); // Rotar la pieza
         });
 
         update();
